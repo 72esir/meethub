@@ -11,6 +11,7 @@ from services.moderation_service.app.schemas import ModerationItemResponse, Queu
 from services.moderation_service.app.settings import settings
 from shared.api import require_admin_token, require_internal_api_key
 from shared.db import Base, build_session_factory, get_db
+from shared.startup import wait_for_database
 
 app = FastAPI(title="Moderation Service")
 session_factory = build_session_factory(settings.database_url)
@@ -28,6 +29,7 @@ AdminAuth = Annotated[None, Depends(require_admin_token(settings.admin_token))]
 
 @app.on_event("startup")
 def startup() -> None:
+    wait_for_database(engine, "moderation-service")
     Base.metadata.create_all(bind=engine)
 
 

@@ -13,6 +13,7 @@ from services.feed_service.app.schemas import FeedResponse, InternalCreateVideoR
 from services.feed_service.app.settings import settings
 from shared.api import require_internal_api_key, require_jwt
 from shared.db import Base, build_session_factory, get_db
+from shared.startup import wait_for_database
 
 app = FastAPI(title="Feed Service")
 session_factory = build_session_factory(settings.database_url)
@@ -31,6 +32,7 @@ InternalAuth = Annotated[None, Depends(require_internal_api_key(settings.interna
 
 @app.on_event("startup")
 def startup() -> None:
+    wait_for_database(engine, "feed-service")
     Base.metadata.create_all(bind=engine)
 
 

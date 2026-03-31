@@ -17,12 +17,19 @@ from shared.api import require_jwt
 from shared.db import Base, build_session_factory, get_db
 from shared.queue import TRANSCODE_QUEUE, enqueue
 from shared.storage import build_s3_client, ensure_bucket
+from shared.startup import wait_for_database
 
 app = FastAPI(title="Upload Service")
 session_factory = build_session_factory(settings.database_url)
 engine = session_factory.kw["bind"]
 s3_client = build_s3_client(
     settings.s3_endpoint_url,
+    settings.s3_access_key,
+    settings.s3_secret_key,
+    settings.s3_region,
+)
+presign_s3_client = build_s3_client(
+    settings.s3_public_endpoint_url or settings.s3_endpoint_url,
     settings.s3_access_key,
     settings.s3_secret_key,
     settings.s3_region,
@@ -40,6 +47,7 @@ CurrentUser = Annotated[str, Depends(require_jwt(settings.jwt_secret))]
 
 @app.on_event("startup")
 def startup() -> None:
+    wait_for_database(engine, "upload-service")
     Base.metadata.create_all(bind=engine)
     ensure_bucket(s3_client, settings.s3_bucket_raw)
 
@@ -50,7 +58,7 @@ def request_upload(payload: UploadRequest, user_id: CurrentUser, db: DbSession) 
     db.add(upload)
     db.commit()
     db.refresh(upload)
-    presigned_url = s3_client.generate_presigned_url(
+    presigned_url = presign_s3_client.generate_presigned_url(
         "put_object",
         Params={"Bucket": settings.s3_bucket_raw, "Key": upload.s3_key, "ContentType": payload.content_type},
         ExpiresIn=1800,

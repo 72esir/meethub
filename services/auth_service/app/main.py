@@ -20,6 +20,7 @@ from services.auth_service.app.settings import settings
 from shared.api import require_jwt
 from shared.db import Base, build_session_factory, get_db
 from shared.security import create_access_token, create_refresh_token, hash_password, verify_password
+from shared.startup import wait_for_database
 
 app = FastAPI(title="Auth Service")
 session_factory = build_session_factory(settings.database_url)
@@ -36,6 +37,7 @@ DbSession = Annotated[Session, Depends(db_dependency)]
 
 @app.on_event("startup")
 def startup() -> None:
+    wait_for_database(engine, "auth-service")
     Base.metadata.create_all(bind=engine)
 
 
