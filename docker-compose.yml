@@ -166,9 +166,16 @@ services:
       - moderation_service
 
   gateway:
-    image: nginx:1.27-alpine
+    image: traefik:v3.3
+    command:
+      - --entrypoints.web.address=:80
+      - --api.dashboard=true
+      - --ping=true
+      - --providers.file.filename=/etc/traefik/dynamic.yml
+      - --accesslog=true
+      - --log.level=INFO
     volumes:
-      - ./infra/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./infra/traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
     depends_on:
       - auth_service
       - upload_service
@@ -176,3 +183,4 @@ services:
       - moderation_service
     ports:
       - "8080:80"
+      - "8081:8080"

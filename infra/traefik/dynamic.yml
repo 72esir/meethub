@@ -1,0 +1,86 @@
+http:
+  routers:
+    auth:
+      rule: PathPrefix(`/auth`)
+      entryPoints:
+        - web
+      middlewares:
+        - api-chain
+      service: auth-service
+    upload:
+      rule: PathPrefix(`/upload`)
+      entryPoints:
+        - web
+      middlewares:
+        - api-chain
+      service: upload-service
+    feed:
+      rule: PathPrefix(`/feed`) || PathPrefix(`/videos`) || PathPrefix(`/users`)
+      entryPoints:
+        - web
+      middlewares:
+        - api-chain
+      service: feed-service
+    moderation:
+      rule: PathPrefix(`/moderation`)
+      entryPoints:
+        - web
+      middlewares:
+        - api-chain
+      service: moderation-service
+    dashboard:
+      rule: PathPrefix(`/dashboard`) || PathPrefix(`/api`)
+      entryPoints:
+        - web
+      middlewares:
+        - api-chain
+      service: api@internal
+    health:
+      rule: Path(`/healthz`)
+      entryPoints:
+        - web
+      service: ping@internal
+
+  middlewares:
+    cors:
+      headers:
+        accessControlAllowOriginList:
+          - "*"
+        accessControlAllowMethods:
+          - GET
+          - POST
+          - PUT
+          - OPTIONS
+        accessControlAllowHeaders:
+          - Authorization
+          - Content-Type
+          - X-Admin-Token
+          - X-Internal-Key
+        addVaryHeader: true
+    api-ratelimit:
+      rateLimit:
+        average: 20
+        burst: 40
+    api-chain:
+      chain:
+        middlewares:
+          - cors
+          - api-ratelimit
+
+  services:
+    auth-service:
+      loadBalancer:
+        servers:
+          - url: http://auth_service:8000
+    upload-service:
+      loadBalancer:
+        servers:
+          - url: http://upload_service:8000
+    feed-service:
+      loadBalancer:
+        servers:
+          - url: http://feed_service:8000
+    moderation-service:
+      loadBalancer:
+        servers:
+          - url: http://moderation_service:8000
