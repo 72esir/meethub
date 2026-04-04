@@ -29,7 +29,7 @@ This project includes a PowerShell smoke test for the main MVP flow:
 Example:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\smoke_test.ps1 -VideoPath "C:\Users\asala\OneDrive\Desktop\test.mp4"
+powershell -ExecutionPolicy Bypass -File .\scripts\smoke_test.ps1 -VideoPath "C:\...\test.mp4"
 ```
 
 ## Optional parameters
