@@ -17,6 +17,7 @@ class TranscodeService:
 
     def process(self, job: TranscodeJob) -> None:
         log_event("transcode.job.received", upload_id=job.upload_id, user_id=job.user_id, s3_input_key=job.s3_input_key)
+        asyncio.run(self.publisher_gateway.update_upload_status(job.upload_id, "transcoding"))
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir_path = Path(tmpdir)
             input_path = tmpdir_path / "input.mp4"
@@ -32,4 +33,5 @@ class TranscodeService:
             log_event("transcode.hls.uploaded", upload_id=job.upload_id, hls_url=hls_url)
 
         asyncio.run(self.publisher_gateway.publish(job, hls_url))
+        asyncio.run(self.publisher_gateway.update_upload_status(job.upload_id, "ready"))
         log_event("transcode.publish.completed", upload_id=job.upload_id, hls_url=hls_url)

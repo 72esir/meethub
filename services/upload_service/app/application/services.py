@@ -5,7 +5,7 @@ from redis import Redis
 from services.upload_service.app.application.exceptions import UploadNotFoundError
 from services.upload_service.app.models import UploadSession, UploadStatus
 from services.upload_service.app.repositories import UploadRepository
-from services.upload_service.app.schemas import UploadSessionResponse, UploadStatusResponse
+from services.upload_service.app.schemas import InternalUpdateUploadStatusRequest, UploadSessionResponse, UploadStatusResponse
 from shared.queue import TRANSCODE_QUEUE, enqueue
 
 
@@ -31,6 +31,7 @@ class UploadService:
         if not upload or str(upload.user_id) != user_id:
             raise UploadNotFoundError("upload not found")
         upload.status = UploadStatus.uploaded
+        upload.error_message = None
         upload.description = description
         upload.hashtags = ",".join(hashtags)
         self.repository.commit()
@@ -55,6 +56,17 @@ class UploadService:
             id=upload.id,
             status=upload.status,
             description=upload.description,
+            error_message=upload.error_message,
             hashtags=upload.hashtags.split(",") if upload.hashtags else [],
             created_at=upload.created_at,
         )
+
+    def update_status_internal(self, *, upload_id: UUID, payload: InternalUpdateUploadStatusRequest) -> dict[str, str]:
+        upload = self.repository.get_upload(upload_id)
+        if not upload:
+            raise UploadNotFoundError("upload not found")
+        upload.status = payload.status
+        upload.error_message = payload.error_message
+        self.repository.commit()
+        self.repository.refresh(upload)
+        return {"status": upload.status.value}

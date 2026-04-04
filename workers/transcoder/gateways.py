@@ -74,10 +74,20 @@ class FFmpegGateway:
 
 
 class MediaPublisherGateway:
-    def __init__(self, feed_service_url: str, moderation_service_url: str, internal_api_key: str) -> None:
+    def __init__(self, feed_service_url: str, moderation_service_url: str, upload_service_url: str, internal_api_key: str) -> None:
         self.feed_service_url = feed_service_url
         self.moderation_service_url = moderation_service_url
+        self.upload_service_url = upload_service_url
         self.internal_api_key = internal_api_key
+
+    async def update_upload_status(self, upload_id: str, status_value: str, error_message: str | None = None) -> None:
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            response = await client.put(
+                f"{self.upload_service_url}/internal/uploads/{upload_id}/status",
+                headers={"X-Internal-Key": self.internal_api_key},
+                json={"status": status_value, "error_message": error_message},
+            )
+            response.raise_for_status()
 
     async def publish(self, job: TranscodeJob, hls_url: str) -> None:
         async with httpx.AsyncClient(timeout=20.0) as client:

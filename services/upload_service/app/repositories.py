@@ -20,3 +20,6 @@ class UploadRepository:
 
     def commit(self) -> None:
         self.db.commit()
+
+    def refresh(self, upload: UploadSession) -> None:
+        self.db.refresh(upload)

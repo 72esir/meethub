@@ -35,6 +35,7 @@ class TranscoderContainer:
             publisher_gateway=MediaPublisherGateway(
                 feed_service_url=settings.feed_service_url,
                 moderation_service_url=settings.moderation_service_url,
+                upload_service_url=settings.upload_service_url,
                 internal_api_key=settings.internal_api_key,
             ),
         )

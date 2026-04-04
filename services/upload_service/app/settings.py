@@ -4,6 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     database_url: str
     jwt_secret: str
+    internal_api_key: str
     redis_queue_url: str
     s3_endpoint_url: str
     s3_public_endpoint_url: str | None = None

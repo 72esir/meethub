@@ -18,6 +18,18 @@ def main() -> None:
         try:
             container.transcode_service.process(TranscodeJob.from_dict(raw_job))
         except Exception as exc:  # noqa: BLE001
+            try:
+                import asyncio
+
+                asyncio.run(
+                    container.transcode_service.publisher_gateway.update_upload_status(
+                        TranscodeJob.from_dict(raw_job).upload_id,
+                        "error",
+                        str(exc),
+                    )
+                )
+            except Exception:
+                pass
             log_event("transcode.job.failed", job=raw_job, error=str(exc))
 
 

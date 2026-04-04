@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     cdn_base_url: str
     feed_service_url: str
     moderation_service_url: str
+    upload_service_url: str
     internal_api_key: str
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")

@@ -5,9 +5,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from services.upload_service.app.application.exceptions import UploadNotFoundError
 from services.upload_service.app.application.services import UploadService
-from services.upload_service.app.presentation.dependencies import get_current_user, get_upload_service
+from services.upload_service.app.presentation.dependencies import get_current_user, get_internal_auth, get_upload_service
 from services.upload_service.app.schemas import (
     CompleteUploadRequest,
+    InternalUpdateUploadStatusRequest,
     UploadRequest,
     UploadSessionResponse,
     UploadStatusResponse,
@@ -50,5 +51,18 @@ def upload_status(
 ) -> UploadStatusResponse:
     try:
         return service.get_status(upload_id=upload_id, user_id=user_id)
+    except UploadNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+
+@router.put("/internal/uploads/{upload_id}/status")
+def update_status_internal(
+    upload_id: UUID,
+    payload: InternalUpdateUploadStatusRequest,
+    service: Annotated[UploadService, Depends(get_upload_service)],
+    _: Annotated[None, Depends(get_internal_auth)],
+) -> dict[str, str]:
+    try:
+        return service.update_status_internal(upload_id=upload_id, payload=payload)
     except UploadNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc

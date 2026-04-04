@@ -28,5 +28,11 @@ class UploadStatusResponse(BaseModel):
     id: UUID
     status: UploadStatus
     description: str | None
+    error_message: str | None
     hashtags: list[str]
     created_at: datetime
+
+
+class InternalUpdateUploadStatusRequest(BaseModel):
+    status: UploadStatus
+    error_message: str | None = None

@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from services.upload_service.app.application.services import UploadService
 from services.upload_service.app.container import UploadContainer
-from shared.api import require_jwt
+from shared.api import require_internal_api_key, require_jwt
 
 bearer_scheme = HTTPBearer(auto_error=True)
 
@@ -31,3 +31,10 @@ def get_current_user(
     container: Annotated[UploadContainer, Depends(get_container)],
 ) -> str:
     return require_jwt(container.settings.jwt_secret)(credentials)
+
+
+def get_internal_auth(
+    request: Request,
+    container: Annotated[UploadContainer, Depends(get_container)],
+) -> None:
+    return require_internal_api_key(container.settings.internal_api_key)(request.headers.get("x-internal-key"))
