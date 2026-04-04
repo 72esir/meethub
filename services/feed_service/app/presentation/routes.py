@@ -6,7 +6,15 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from services.feed_service.app.application.exceptions import InvalidFollowError, VideoNotFoundError
 from services.feed_service.app.application.services import FeedService
 from services.feed_service.app.presentation.dependencies import get_current_user, get_feed_service, get_internal_auth
-from services.feed_service.app.schemas import FeedResponse, InternalCreateVideoRequest, UpdateStatusRequest, VideoResponse
+from services.feed_service.app.schemas import (
+    FeedResponse,
+    FollowActionResponse,
+    FollowListItemResponse,
+    FollowStatusResponse,
+    InternalCreateVideoRequest,
+    UpdateStatusRequest,
+    VideoResponse,
+)
 
 router = APIRouter()
 
@@ -62,15 +70,54 @@ def record_view(
 
 
 @router.post("/users/{target_user_id}/follow")
-def toggle_follow(
+def follow_user(
     target_user_id: UUID,
     user_id: Annotated[str, Depends(get_current_user)],
     service: Annotated[FeedService, Depends(get_feed_service)],
-) -> dict[str, bool]:
+) -> FollowActionResponse:
     try:
-        return service.toggle_follow(target_user_id=target_user_id, user_id=user_id)
+        return service.follow_user(target_user_id=target_user_id, user_id=user_id)
     except InvalidFollowError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+
+@router.delete("/users/{target_user_id}/follow", response_model=FollowActionResponse)
+def unfollow_user(
+    target_user_id: UUID,
+    user_id: Annotated[str, Depends(get_current_user)],
+    service: Annotated[FeedService, Depends(get_feed_service)],
+) -> FollowActionResponse:
+    try:
+        return service.unfollow_user(target_user_id=target_user_id, user_id=user_id)
+    except InvalidFollowError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+
+@router.get("/users/{target_user_id}/follow-status", response_model=FollowStatusResponse)
+def follow_status(
+    target_user_id: UUID,
+    user_id: Annotated[str, Depends(get_current_user)],
+    service: Annotated[FeedService, Depends(get_feed_service)],
+) -> FollowStatusResponse:
+    return service.follow_status(target_user_id=target_user_id, user_id=user_id)
+
+
+@router.get("/users/{target_user_id}/followers", response_model=list[FollowListItemResponse])
+def followers(
+    target_user_id: UUID,
+    _: Annotated[str, Depends(get_current_user)],
+    service: Annotated[FeedService, Depends(get_feed_service)],
+) -> list[FollowListItemResponse]:
+    return service.followers(target_user_id=target_user_id)
+
+
+@router.get("/users/{target_user_id}/following", response_model=list[FollowListItemResponse])
+def following_users(
+    target_user_id: UUID,
+    _: Annotated[str, Depends(get_current_user)],
+    service: Annotated[FeedService, Depends(get_feed_service)],
+) -> list[FollowListItemResponse]:
+    return service.following_list(target_user_id=target_user_id)
 
 
 @router.get("/users/{target_user_id}/videos", response_model=list[VideoResponse])

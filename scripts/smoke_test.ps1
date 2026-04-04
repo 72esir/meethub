@@ -75,6 +75,8 @@ $runId = [guid]::NewGuid().ToString("N").Substring(0, 8)
 $email = "smoke_$runId@example.com"
 $username = "smoke_$runId"
 $password = "password123"
+$viewerEmail = "viewer_$runId@example.com"
+$viewerUsername = "viewer_$runId"
 
 Write-Step "Checking health endpoints"
 Invoke-WebRequest -UseBasicParsing "$GatewayUrl/healthz" | Out-Null
@@ -86,6 +88,21 @@ Invoke-Json -Method GET -Uri "$FeedUrl/health" | Out-Null
 Invoke-Json -Method GET -Uri "$FeedUrl/ready" | Out-Null
 Invoke-Json -Method GET -Uri "$ModerationUrl/health" | Out-Null
 Invoke-Json -Method GET -Uri "$ModerationUrl/ready" | Out-Null
+
+Write-Step "Checking feed follow endpoints availability"
+$feedOpenApi = Invoke-Json -Method GET -Uri "$FeedUrl/openapi.json"
+$requiredFeedPaths = @(
+    "/users/{target_user_id}/follow",
+    "/users/{target_user_id}/follow-status",
+    "/users/{target_user_id}/followers",
+    "/users/{target_user_id}/following"
+)
+
+foreach ($requiredPath in $requiredFeedPaths) {
+    if (-not $feedOpenApi.paths.PSObject.Properties.Name.Contains($requiredPath)) {
+        throw "Feed service is missing required route $requiredPath. Rebuild and restart feed_service."
+    }
+}
 
 Write-Step "Registering user $email"
 $register = Invoke-Json -Method POST -Uri "$AuthUrl/auth/register" -Body @{
@@ -101,6 +118,20 @@ $authHeaders = @{ Authorization = "Bearer $accessToken" }
 Write-Step "Fetching current profile"
 $me = Invoke-Json -Method GET -Uri "$AuthUrl/auth/me" -Headers $authHeaders
 $userId = $me.id
+
+Write-Step "Registering viewer user $viewerEmail"
+$viewerRegister = Invoke-Json -Method POST -Uri "$AuthUrl/auth/register" -Body @{
+    email    = $viewerEmail
+    password = $password
+    username = $viewerUsername
+}
+
+$viewerAccessToken = $viewerRegister.access_token
+$viewerAuthHeaders = @{ Authorization = "Bearer $viewerAccessToken" }
+
+Write-Step "Fetching viewer profile"
+$viewerMe = Invoke-Json -Method GET -Uri "$AuthUrl/auth/me" -Headers $viewerAuthHeaders
+$viewerUserId = $viewerMe.id
 
 Write-Step "Requesting upload session"
 $uploadRequest = Invoke-Json -Method POST -Uri "$UploadUrl/upload/request" -Headers $authHeaders -Body @{
@@ -172,17 +203,44 @@ if ($null -eq $feedVideo) {
 }
 
 Write-Step "Checking video endpoint and interactions"
-Invoke-Json -Method GET -Uri "$FeedUrl/videos/$videoId" -Headers $authHeaders | Out-Null
-Invoke-Json -Method POST -Uri "$FeedUrl/videos/$videoId/like" -Headers $authHeaders | Out-Null
-Invoke-Json -Method POST -Uri "$FeedUrl/videos/$videoId/view" -Headers $authHeaders | Out-Null
-Invoke-Json -Method GET -Uri "$FeedUrl/users/$userId/videos" -Headers $authHeaders | Out-Null
+Invoke-Json -Method GET -Uri "$FeedUrl/videos/$videoId" -Headers $viewerAuthHeaders | Out-Null
+Invoke-Json -Method POST -Uri "$FeedUrl/videos/$videoId/like" -Headers $viewerAuthHeaders | Out-Null
+Invoke-Json -Method POST -Uri "$FeedUrl/videos/$videoId/view" -Headers $viewerAuthHeaders | Out-Null
+Invoke-Json -Method GET -Uri "$FeedUrl/users/$userId/videos" -Headers $viewerAuthHeaders | Out-Null
+
+Write-Step "Checking follow flow"
+Invoke-Json -Method POST -Uri "$FeedUrl/users/$userId/follow" -Headers $viewerAuthHeaders | Out-Null
+
+$followStatus = Invoke-Json -Method GET -Uri "$FeedUrl/users/$userId/follow-status" -Headers $viewerAuthHeaders
+if (-not $followStatus.is_following) {
+    throw "Follow status did not switch to is_following=true"
+}
+
+$followers = @(Invoke-Json -Method GET -Uri "$FeedUrl/users/$userId/followers" -Headers $viewerAuthHeaders)
+if (-not (@($followers) | Where-Object { $_.user_id -eq $viewerUserId })) {
+    throw "Viewer user was not found in followers list"
+}
+
+$following = @(Invoke-Json -Method GET -Uri "$FeedUrl/users/$viewerUserId/following" -Headers $viewerAuthHeaders)
+if (-not (@($following) | Where-Object { $_.user_id -eq $userId })) {
+    throw "Author user was not found in following list"
+}
+
+Invoke-Json -Method DELETE -Uri "$FeedUrl/users/$userId/follow" -Headers $viewerAuthHeaders | Out-Null
+
+$followStatusAfterDelete = Invoke-Json -Method GET -Uri "$FeedUrl/users/$userId/follow-status" -Headers $viewerAuthHeaders
+if ($followStatusAfterDelete.is_following) {
+    throw "Follow status did not switch back to is_following=false"
+}
 
 Write-Step "Smoke test completed"
 [pscustomobject]@{
-    user_id       = $userId
-    upload_id     = $uploadId
-    video_id      = $videoId
-    moderation_id = $moderationId
-    feed_status   = "ok"
-    upload_status = $uploadStatus.status
+    author_user_id = $userId
+    viewer_user_id = $viewerUserId
+    upload_id      = $uploadId
+    video_id       = $videoId
+    moderation_id  = $moderationId
+    feed_status    = "ok"
+    follow_status  = "ok"
+    upload_status  = $uploadStatus.status
 }

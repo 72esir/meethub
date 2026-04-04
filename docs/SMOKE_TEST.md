@@ -3,15 +3,17 @@
 This project includes a PowerShell smoke test for the main MVP flow:
 
 1. Health and readiness checks
-2. User registration
-3. Upload session creation
-4. Binary upload to MinIO via presigned URL
-5. Upload completion
-6. Polling upload status until `ready`
-7. Polling moderation queue
-8. Moderation approve
-9. Polling `feed/foryou`
-10. Video read / like / view checks
+2. Author user registration
+3. Viewer user registration
+4. Upload session creation
+5. Binary upload to MinIO via presigned URL
+6. Upload completion
+7. Polling upload status until `ready`
+8. Polling moderation queue
+9. Moderation approve
+10. Polling `feed/foryou`
+11. Video read / like / view checks from another user
+12. Follow / follow-status / followers / following / unfollow checks
 
 ## Script
 
@@ -52,12 +54,14 @@ powershell -ExecutionPolicy Bypass -File .\scripts\smoke_test.ps1 -VideoPath "C:
 The script returns an object like:
 
 ```powershell
-user_id       : ...
-upload_id     : ...
-video_id      : ...
-moderation_id : ...
-feed_status   : ok
-upload_status : ready
+author_user_id : ...
+viewer_user_id : ...
+upload_id      : ...
+video_id       : ...
+moderation_id  : ...
+feed_status    : ok
+follow_status  : ok
+upload_status  : ready
 ```
 
 ## Failure points
@@ -70,6 +74,32 @@ upload_status : ready
   - inspect `transcoder_worker` and `moderation_service` logs
 - video not appearing in feed:
   - inspect `feed_service` and moderation approval flow
+- follow status mismatch or missing users in followers/following:
+  - inspect `feed_service` logs and follow graph endpoints
+
+## What it validates
+
+- `auth_service`:
+  - registration
+  - token issuance
+  - authenticated profile fetch
+- `upload_service`:
+  - upload session creation
+  - completion callback
+  - upload status polling
+- `transcoder_worker`:
+  - queue consumption
+  - HLS generation
+  - internal callbacks to upload/feed/moderation
+- `moderation_service`:
+  - pending queue creation
+  - approve flow
+- `feed_service`:
+  - approved video visibility in `for you`
+  - video metadata read
+  - like and view endpoints
+  - author videos list
+  - follow graph endpoints
 
 ## Useful logs
 

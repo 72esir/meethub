@@ -4,9 +4,17 @@ from uuid import UUID
 from redis import Redis
 
 from services.feed_service.app.application.exceptions import InvalidFollowError, VideoNotFoundError
-from services.feed_service.app.models import Video, VideoStatus
+from services.feed_service.app.models import Follow, Video, VideoStatus
 from services.feed_service.app.repositories import FeedRepository
-from services.feed_service.app.schemas import FeedResponse, InternalCreateVideoRequest, UpdateStatusRequest, VideoResponse
+from services.feed_service.app.schemas import (
+    FeedResponse,
+    FollowActionResponse,
+    FollowListItemResponse,
+    FollowStatusResponse,
+    InternalCreateVideoRequest,
+    UpdateStatusRequest,
+    VideoResponse,
+)
 
 
 class FeedService:
@@ -63,6 +71,34 @@ class FeedService:
             raise InvalidFollowError("cannot follow yourself")
         return {"following": self.repository.toggle_follow(UUID(user_id), target_user_id)}
 
+    def follow_user(self, *, target_user_id: UUID, user_id: str) -> FollowActionResponse:
+        if str(target_user_id) == user_id:
+            raise InvalidFollowError("cannot follow yourself")
+        self.repository.follow_user(UUID(user_id), target_user_id)
+        return FollowActionResponse(following=True)
+
+    def unfollow_user(self, *, target_user_id: UUID, user_id: str) -> FollowActionResponse:
+        if str(target_user_id) == user_id:
+            raise InvalidFollowError("cannot follow yourself")
+        self.repository.unfollow_user(UUID(user_id), target_user_id)
+        return FollowActionResponse(following=False)
+
+    def follow_status(self, *, target_user_id: UUID, user_id: str) -> FollowStatusResponse:
+        current_user_id = UUID(user_id)
+        return FollowStatusResponse(
+            user_id=current_user_id,
+            target_user_id=target_user_id,
+            is_following=self.repository.is_following(current_user_id, target_user_id),
+            followers_count=self.repository.count_followers(target_user_id),
+            following_count=self.repository.count_following(target_user_id),
+        )
+
+    def followers(self, *, target_user_id: UUID) -> list[FollowListItemResponse]:
+        return [self._serialize_follow_item(item.follower_id, item.created_at) for item in self.repository.get_followers(target_user_id)]
+
+    def following_list(self, *, target_user_id: UUID) -> list[FollowListItemResponse]:
+        return [self._serialize_follow_item(item.followee_id, item.created_at) for item in self.repository.get_following(target_user_id)]
+
     def user_videos(self, *, target_user_id: UUID) -> list[Video]:
         return self.repository.get_user_videos(target_user_id)
 
@@ -98,3 +134,6 @@ class FeedService:
 
     def _serialize(self, video: Video) -> VideoResponse:
         return VideoResponse.model_validate(video)
+
+    def _serialize_follow_item(self, user_id: UUID, created_at) -> FollowListItemResponse:
+        return FollowListItemResponse(user_id=user_id, created_at=created_at)

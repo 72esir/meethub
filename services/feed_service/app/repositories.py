@@ -74,6 +74,41 @@ class FeedRepository:
             self.db.rollback()
         return True
 
+    def follow_user(self, follower_id: UUID, followee_id: UUID) -> bool:
+        existing = self.db.scalar(select(Follow).where(Follow.follower_id == follower_id, Follow.followee_id == followee_id))
+        if existing:
+            return True
+        self.db.add(Follow(id=uuid4(), follower_id=follower_id, followee_id=followee_id))
+        try:
+            self.db.commit()
+        except IntegrityError:
+            self.db.rollback()
+        return True
+
+    def unfollow_user(self, follower_id: UUID, followee_id: UUID) -> bool:
+        existing = self.db.scalar(select(Follow).where(Follow.follower_id == follower_id, Follow.followee_id == followee_id))
+        if not existing:
+            return False
+        self.db.delete(existing)
+        self.db.commit()
+        return False
+
+    def is_following(self, follower_id: UUID, followee_id: UUID) -> bool:
+        existing = self.db.scalar(select(Follow.id).where(Follow.follower_id == follower_id, Follow.followee_id == followee_id))
+        return existing is not None
+
+    def get_followers(self, target_user_id: UUID) -> list[Follow]:
+        return self.db.scalars(select(Follow).where(Follow.followee_id == target_user_id).order_by(desc(Follow.created_at))).all()
+
+    def get_following(self, user_id: UUID) -> list[Follow]:
+        return self.db.scalars(select(Follow).where(Follow.follower_id == user_id).order_by(desc(Follow.created_at))).all()
+
+    def count_followers(self, target_user_id: UUID) -> int:
+        return len(self.db.scalars(select(Follow.id).where(Follow.followee_id == target_user_id)).all())
+
+    def count_following(self, user_id: UUID) -> int:
+        return len(self.db.scalars(select(Follow.id).where(Follow.follower_id == user_id)).all())
+
     def get_user_videos(self, target_user_id: UUID) -> list[Video]:
         return self.db.scalars(
             select(Video).where(Video.author_id == target_user_id, Video.status == VideoStatus.approved).order_by(desc(Video.created_at))

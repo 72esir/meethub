@@ -37,3 +37,20 @@ class InternalCreateVideoRequest(BaseModel):
 
 class UpdateStatusRequest(BaseModel):
     status: VideoStatus
+
+
+class FollowActionResponse(BaseModel):
+    following: bool
+
+
+class FollowStatusResponse(BaseModel):
+    user_id: UUID
+    target_user_id: UUID
+    is_following: bool
+    followers_count: int
+    following_count: int
+
+
+class FollowListItemResponse(BaseModel):
+    user_id: UUID
+    created_at: datetime
