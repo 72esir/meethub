@@ -44,3 +44,14 @@ Backend monorepo for a TikTok-like MVP on `FastAPI`.
 - `POST http://localhost:8080/auth/login`
 - `POST http://localhost:8080/upload/request`
 - `GET http://localhost:8080/feed/foryou`
+
+## Smoke test
+
+- Script: [scripts/smoke_test.ps1](/c:/Users/asala/projects/python/meethub/scripts/smoke_test.ps1)
+- Docs: [docs/SMOKE_TEST.md](/c:/Users/asala/projects/python/meethub/docs/SMOKE_TEST.md)
+
+Run example:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\smoke_test.ps1 -VideoPath "C:\Users\asala\OneDrive\Desktop\test.mp4"
+```

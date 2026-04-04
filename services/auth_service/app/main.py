@@ -4,6 +4,7 @@ from services.auth_service.app.container import AuthContainer
 from services.auth_service.app.presentation.routes import router
 from services.auth_service.app.settings import settings
 from shared.db import Base
+from shared.health import check_database, readiness_response
 from shared.startup import wait_for_database
 
 
@@ -17,6 +18,17 @@ def create_app() -> FastAPI:
     def startup() -> None:
         wait_for_database(container.engine, "auth-service")
         Base.metadata.create_all(bind=container.engine)
+
+    @app.get("/health")
+    def health() -> dict[str, str]:
+        return {"service": "auth-service", "status": "ok"}
+
+    @app.get("/ready")
+    def ready() -> dict[str, object]:
+        return readiness_response(
+            "auth-service",
+            {"database": lambda: check_database(container.engine)},
+        )
 
     return app
 
