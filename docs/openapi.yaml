@@ -1,0 +1,1198 @@
+openapi: 3.0.4
+info:
+  title: Meethub MVP Backend API
+  description: >
+    OpenAPI specification for the TikTok-like MVP backend. The gateway entry
+    point is Traefik on port 8080. Direct service ports are also listed for
+    local development and debugging.
+  version: 0.1.0
+
+servers:
+  - url: http://localhost:8080
+    description: Gateway
+  - url: http://localhost:8001
+    description: Auth service
+  - url: http://localhost:8002
+    description: Upload service
+  - url: http://localhost:8003
+    description: Feed service
+  - url: http://localhost:8004
+    description: Moderation service
+
+tags:
+  - name: health
+    description: Health and readiness endpoints
+  - name: auth
+    description: Registration, login, profile, refresh and logout
+  - name: upload
+    description: Upload session management and upload lifecycle
+  - name: feed
+    description: Feed, videos, likes, views and follows
+  - name: moderation
+    description: Moderation queue and approval workflow
+  - name: internal
+    description: Internal service-to-service endpoints
+
+paths:
+  /healthz:
+    get:
+      tags: [health]
+      summary: Gateway health check
+      operationId: gatewayHealth
+      responses:
+        '200':
+          description: Gateway is alive
+
+  /health:
+    get:
+      tags: [health]
+      summary: Service liveness check
+      operationId: serviceHealth
+      responses:
+        '200':
+          description: Service is alive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /ready:
+    get:
+      tags: [health]
+      summary: Service readiness check
+      operationId: serviceReady
+      responses:
+        '200':
+          description: Service is ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessResponse'
+        '503':
+          description: Dependency check failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessResponse'
+
+  /auth/register:
+    post:
+      tags: [auth]
+      summary: Register new user
+      operationId: registerUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenPair'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /auth/login:
+    post:
+      tags: [auth]
+      summary: Login by email and password
+      operationId: loginUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenPair'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/refresh:
+    post:
+      tags: [auth]
+      summary: Refresh access token
+      operationId: refreshToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: Tokens refreshed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenPair'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/logout:
+    post:
+      tags: [auth]
+      summary: Logout and invalidate refresh token
+      operationId: logoutUser
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '204':
+          description: Session invalidated
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/me:
+    get:
+      tags: [auth]
+      summary: Get current user profile
+      operationId: getCurrentUser
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [auth]
+      summary: Update current user profile
+      operationId: updateCurrentUser
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+      responses:
+        '200':
+          description: Updated user profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /upload/request:
+    post:
+      tags: [upload]
+      summary: Create upload session and generate presigned URL
+      operationId: requestUpload
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UploadRequest'
+      responses:
+        '200':
+          description: Upload session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadSessionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /upload/complete:
+    post:
+      tags: [upload]
+      summary: Complete upload and enqueue transcoding
+      operationId: completeUpload
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompleteUploadRequest'
+      responses:
+        '202':
+          description: Upload accepted for processing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusMessage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /upload/status/{uploadId}:
+    get:
+      tags: [upload]
+      summary: Get upload processing status
+      operationId: getUploadStatus
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UploadIdPath'
+      responses:
+        '200':
+          description: Upload status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadStatusResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /internal/uploads/{uploadId}/status:
+    put:
+      tags: [internal]
+      summary: Update upload status from worker
+      operationId: internalUpdateUploadStatus
+      security:
+        - internalApiKey: []
+      parameters:
+        - $ref: '#/components/parameters/UploadIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InternalUpdateUploadStatusRequest'
+      responses:
+        '200':
+          description: Upload status updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusMessage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /feed/foryou:
+    get:
+      tags: [feed]
+      summary: Get For You feed
+      operationId: getForYouFeed
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: cursor
+          schema:
+            type: string
+          required: false
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+          required: false
+      responses:
+        '200':
+          description: Feed page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeedResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /feed/following:
+    get:
+      tags: [feed]
+      summary: Get following feed
+      operationId: getFollowingFeed
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: cursor
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          required: false
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+          required: false
+      responses:
+        '200':
+          description: Feed page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeedResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /videos/{videoId}:
+    get:
+      tags: [feed]
+      summary: Get video metadata
+      operationId: getVideo
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/VideoIdPath'
+      responses:
+        '200':
+          description: Video metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /videos/{videoId}/like:
+    post:
+      tags: [feed]
+      summary: Toggle like for current user
+      operationId: toggleLike
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/VideoIdPath'
+      responses:
+        '200':
+          description: Like state toggled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BooleanFlagResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /videos/{videoId}/view:
+    post:
+      tags: [feed]
+      summary: Record video view
+      operationId: recordView
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/VideoIdPath'
+      responses:
+        '200':
+          description: View recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BooleanFlagResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /users/{targetUserId}/follow:
+    post:
+      tags: [feed]
+      summary: Follow target user
+      operationId: followUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TargetUserIdPath'
+      responses:
+        '200':
+          description: Follow created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FollowActionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      tags: [feed]
+      summary: Unfollow target user
+      operationId: unfollowUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TargetUserIdPath'
+      responses:
+        '200':
+          description: Follow removed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FollowActionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /users/{targetUserId}/follow-status:
+    get:
+      tags: [feed]
+      summary: Get follow status and counters
+      operationId: getFollowStatus
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TargetUserIdPath'
+      responses:
+        '200':
+          description: Follow status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FollowStatusResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /users/{targetUserId}/followers:
+    get:
+      tags: [feed]
+      summary: Get followers list
+      operationId: getFollowers
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TargetUserIdPath'
+      responses:
+        '200':
+          description: Followers list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FollowListItemResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /users/{targetUserId}/following:
+    get:
+      tags: [feed]
+      summary: Get following list
+      operationId: getFollowingUsers
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TargetUserIdPath'
+      responses:
+        '200':
+          description: Following list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FollowListItemResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /users/{targetUserId}/videos:
+    get:
+      tags: [feed]
+      summary: Get videos by user
+      operationId: getUserVideos
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TargetUserIdPath'
+      responses:
+        '200':
+          description: User videos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VideoResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /internal/videos:
+    post:
+      tags: [internal]
+      summary: Create video metadata from worker
+      operationId: internalCreateVideo
+      security:
+        - internalApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InternalCreateVideoRequest'
+      responses:
+        '201':
+          description: Video created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /internal/videos/{videoId}/status:
+    put:
+      tags: [internal]
+      summary: Update video moderation status
+      operationId: internalUpdateVideoStatus
+      security:
+        - internalApiKey: []
+      parameters:
+        - $ref: '#/components/parameters/VideoIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStatusRequest'
+      responses:
+        '200':
+          description: Video status updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusMessage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /moderation/queue:
+    post:
+      tags: [moderation, internal]
+      summary: Add video to moderation queue
+      operationId: queueModerationItem
+      security:
+        - internalApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueueRequest'
+      responses:
+        '201':
+          description: Moderation item created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationItemResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /moderation/pending:
+    get:
+      tags: [moderation]
+      summary: Get pending moderation items
+      operationId: getPendingModerationItems
+      security:
+        - adminToken: []
+      responses:
+        '200':
+          description: Pending moderation items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ModerationItemResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /moderation/{itemId}/approve:
+    post:
+      tags: [moderation]
+      summary: Approve moderation item
+      operationId: approveModerationItem
+      security:
+        - adminToken: []
+      parameters:
+        - $ref: '#/components/parameters/ModerationIdPath'
+      responses:
+        '200':
+          description: Moderation item approved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusMessage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /moderation/{itemId}/reject:
+    post:
+      tags: [moderation]
+      summary: Reject moderation item
+      operationId: rejectModerationItem
+      security:
+        - adminToken: []
+      parameters:
+        - $ref: '#/components/parameters/ModerationIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RejectRequest'
+      responses:
+        '200':
+          description: Moderation item rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusMessage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    adminToken:
+      type: apiKey
+      in: header
+      name: X-Admin-Token
+    internalApiKey:
+      type: apiKey
+      in: header
+      name: X-Internal-Api-Key
+
+  parameters:
+    UploadIdPath:
+      in: path
+      name: uploadId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    VideoIdPath:
+      in: path
+      name: videoId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    TargetUserIdPath:
+      in: path
+      name: targetUserId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ModerationIdPath:
+      in: path
+      name: itemId
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: Conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        detail:
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                type: object
+      required:
+        - detail
+
+    HealthResponse:
+      type: object
+      properties:
+        service:
+          type: string
+        status:
+          type: string
+          example: ok
+      required:
+        - service
+        - status
+
+    ReadinessCheckItem:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        detail:
+          type: string
+          nullable: true
+      required:
+        - ok
+
+    ReadinessResponse:
+      type: object
+      properties:
+        service:
+          type: string
+        status:
+          type: string
+        checks:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/ReadinessCheckItem'
+      required:
+        - service
+        - status
+        - checks
+
+    StatusMessage:
+      type: object
+      additionalProperties:
+        type: string
+
+    RegisterRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        username:
+          type: string
+          minLength: 3
+          maxLength: 64
+      required:
+        - email
+        - password
+        - username
+
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      required:
+        - email
+        - password
+
+    RefreshRequest:
+      type: object
+      properties:
+        refresh_token:
+          type: string
+      required:
+        - refresh_token
+
+    UpdateProfileRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          nullable: true
+          minLength: 3
+          maxLength: 64
+        avatar_url:
+          type: string
+          nullable: true
+      additionalProperties: false
+
+    TokenPair:
+      type: object
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        token_type:
+          type: string
+          example: bearer
+      required:
+        - access_token
+        - refresh_token
+        - token_type
+
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        username:
+          type: string
+        avatar_url:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - email
+        - username
+        - created_at
+
+    UploadStatus:
+      type: string
+      enum:
+        - pending
+        - uploaded
+        - transcoding
+        - ready
+        - error
+
+    UploadRequest:
+      type: object
+      properties:
+        file_name:
+          type: string
+        content_type:
+          type: string
+          default: video/mp4
+      required:
+        - file_name
+        - content_type
+
+    UploadSessionResponse:
+      type: object
+      properties:
+        upload_id:
+          type: string
+          format: uuid
+        upload_url:
+          type: string
+        s3_key:
+          type: string
+        expires_in_seconds:
+          type: integer
+          default: 1800
+      required:
+        - upload_id
+        - upload_url
+        - s3_key
+        - expires_in_seconds
+
+    CompleteUploadRequest:
+      type: object
+      properties:
+        upload_id:
+          type: string
+          format: uuid
+        description:
+          type: string
+          maxLength: 5000
+          default: ""
+        hashtags:
+          type: array
+          items:
+            type: string
+      required:
+        - upload_id
+
+    UploadStatusResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/UploadStatus'
+        description:
+          type: string
+          nullable: true
+        error_message:
+          type: string
+          nullable: true
+        hashtags:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - status
+        - hashtags
+        - created_at
+
+    InternalUpdateUploadStatusRequest:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/UploadStatus'
+        error_message:
+          type: string
+          nullable: true
+      required:
+        - status
+
+    VideoStatus:
+      type: string
+      enum:
+        - moderation_pending
+        - approved
+        - rejected
+
+    VideoResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        author_id:
+          type: string
+          format: uuid
+        description:
+          type: string
+        hashtags:
+          type: array
+          items:
+            type: string
+        hls_url:
+          type: string
+        thumbnail_url:
+          type: string
+          nullable: true
+        duration:
+          type: integer
+          nullable: true
+        status:
+          $ref: '#/components/schemas/VideoStatus'
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - author_id
+        - description
+        - hashtags
+        - hls_url
+        - status
+        - created_at
+
+    FeedResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/VideoResponse'
+        next_cursor:
+          type: string
+          nullable: true
+      required:
+        - items
+
+    InternalCreateVideoRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        author_id:
+          type: string
+          format: uuid
+        description:
+          type: string
+          default: ""
+        hashtags:
+          type: array
+          items:
+            type: string
+        hls_url:
+          type: string
+        thumbnail_url:
+          type: string
+          nullable: true
+        duration:
+          type: integer
+          nullable: true
+      required:
+        - id
+        - author_id
+        - hls_url
+
+    UpdateStatusRequest:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/VideoStatus'
+      required:
+        - status
+
+    BooleanFlagResponse:
+      type: object
+      additionalProperties:
+        type: boolean
+
+    FollowActionResponse:
+      type: object
+      properties:
+        following:
+          type: boolean
+      required:
+        - following
+
+    FollowStatusResponse:
+      type: object
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        target_user_id:
+          type: string
+          format: uuid
+        is_following:
+          type: boolean
+        followers_count:
+          type: integer
+        following_count:
+          type: integer
+      required:
+        - user_id
+        - target_user_id
+        - is_following
+        - followers_count
+        - following_count
+
+    FollowListItemResponse:
+      type: object
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - user_id
+        - created_at
+
+    ModerationStatus:
+      type: string
+      enum:
+        - pending
+        - approved
+        - rejected
+
+    QueueRequest:
+      type: object
+      properties:
+        video_id:
+          type: string
+          format: uuid
+        author_id:
+          type: string
+          format: uuid
+        video_url:
+          type: string
+      required:
+        - video_id
+        - author_id
+        - video_url
+
+    ModerationItemResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        video_id:
+          type: string
+          format: uuid
+        author_id:
+          type: string
+          format: uuid
+        video_url:
+          type: string
+        status:
+          $ref: '#/components/schemas/ModerationStatus'
+        reason:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - video_id
+        - author_id
+        - video_url
+        - status
+        - created_at
+
+    RejectRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+      required:
+        - reason
