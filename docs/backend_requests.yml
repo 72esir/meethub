@@ -1,0 +1,296 @@
+meta:
+  name: meethub-backend-requests
+  version: "1.0"
+  description: >
+    Catalog of backend requests for the local MVP stack. Values in {{braces}}
+    are variables that should be substituted before execution.
+
+variables:
+  gateway_url: "http://localhost:8080"
+  auth_url: "http://localhost:8001"
+  upload_url: "http://localhost:8002"
+  feed_url: "http://localhost:8003"
+  moderation_url: "http://localhost:8004"
+  public_minio_url: "http://localhost:9000"
+  access_token: "<paste-access-token>"
+  refresh_token: "<paste-refresh-token>"
+  admin_token: "123"
+  internal_api_key: "<internal-api-key>"
+  upload_id: "<upload-id>"
+  video_id: "<video-id>"
+  user_id: "<user-id>"
+  target_user_id: "<target-user-id>"
+  moderation_id: "<moderation-id>"
+  upload_url_presigned: "<presigned-upload-url>"
+
+requests:
+  gateway:
+    - name: gateway-health
+      method: GET
+      url: "{{gateway_url}}/healthz"
+
+  auth:
+    - name: auth-health
+      method: GET
+      url: "{{auth_url}}/health"
+
+    - name: auth-ready
+      method: GET
+      url: "{{auth_url}}/ready"
+
+    - name: register
+      method: POST
+      url: "{{auth_url}}/auth/register"
+      headers:
+        Content-Type: application/json
+      body:
+        email: "user@example.com"
+        password: "password123"
+        username: "user1"
+
+    - name: login
+      method: POST
+      url: "{{auth_url}}/auth/login"
+      headers:
+        Content-Type: application/json
+      body:
+        email: "user@example.com"
+        password: "password123"
+
+    - name: refresh
+      method: POST
+      url: "{{auth_url}}/auth/refresh"
+      headers:
+        Content-Type: application/json
+      body:
+        refresh_token: "{{refresh_token}}"
+
+    - name: logout
+      method: POST
+      url: "{{auth_url}}/auth/logout"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+        Content-Type: application/json
+      body:
+        refresh_token: "{{refresh_token}}"
+
+    - name: get-me
+      method: GET
+      url: "{{auth_url}}/auth/me"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+
+    - name: update-me
+      method: PUT
+      url: "{{auth_url}}/auth/me"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+        Content-Type: application/json
+      body:
+        username: "user1_new"
+        avatar_url: "https://example.com/avatar.jpg"
+
+  upload:
+    - name: upload-health
+      method: GET
+      url: "{{upload_url}}/health"
+
+    - name: upload-ready
+      method: GET
+      url: "{{upload_url}}/ready"
+
+    - name: request-upload
+      method: POST
+      url: "{{upload_url}}/upload/request"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+        Content-Type: application/json
+      body:
+        file_name: "test.mp4"
+        content_type: "video/mp4"
+
+    - name: upload-binary-to-presigned-url
+      method: PUT
+      url: "{{upload_url_presigned}}"
+      headers:
+        Content-Type: "video/mp4"
+      notes:
+        - "Upload raw binary file body directly to the presigned URL."
+        - "Example with curl.exe: --data-binary @C:\\path\\to\\test.mp4"
+
+    - name: complete-upload
+      method: POST
+      url: "{{upload_url}}/upload/complete"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+        Content-Type: application/json
+      body:
+        upload_id: "{{upload_id}}"
+        description: "My first video"
+        hashtags:
+          - "mvp"
+          - "test"
+
+    - name: upload-status
+      method: GET
+      url: "{{upload_url}}/upload/status/{{upload_id}}"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+
+    - name: internal-update-upload-status
+      method: PUT
+      url: "{{upload_url}}/internal/uploads/{{upload_id}}/status"
+      headers:
+        X-Internal-Api-Key: "{{internal_api_key}}"
+        Content-Type: application/json
+      body:
+        status: "ready"
+        error_message: null
+
+  feed:
+    - name: feed-health
+      method: GET
+      url: "{{feed_url}}/health"
+
+    - name: feed-ready
+      method: GET
+      url: "{{feed_url}}/ready"
+
+    - name: for-you-feed
+      method: GET
+      url: "{{feed_url}}/feed/foryou?limit=20"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+
+    - name: following-feed
+      method: GET
+      url: "{{feed_url}}/feed/following?cursor=0&limit=20"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+
+    - name: get-video
+      method: GET
+      url: "{{feed_url}}/videos/{{video_id}}"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+
+    - name: like-video
+      method: POST
+      url: "{{feed_url}}/videos/{{video_id}}/like"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+
+    - name: record-view
+      method: POST
+      url: "{{feed_url}}/videos/{{video_id}}/view"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+
+    - name: follow-user
+      method: POST
+      url: "{{feed_url}}/users/{{target_user_id}}/follow"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+
+    - name: unfollow-user
+      method: DELETE
+      url: "{{feed_url}}/users/{{target_user_id}}/follow"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+
+    - name: follow-status
+      method: GET
+      url: "{{feed_url}}/users/{{target_user_id}}/follow-status"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+
+    - name: user-followers
+      method: GET
+      url: "{{feed_url}}/users/{{target_user_id}}/followers"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+
+    - name: user-following
+      method: GET
+      url: "{{feed_url}}/users/{{target_user_id}}/following"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+
+    - name: user-videos
+      method: GET
+      url: "{{feed_url}}/users/{{target_user_id}}/videos"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+
+    - name: internal-create-video
+      method: POST
+      url: "{{feed_url}}/internal/videos"
+      headers:
+        X-Internal-Api-Key: "{{internal_api_key}}"
+        Content-Type: application/json
+      body:
+        id: "{{upload_id}}"
+        author_id: "{{user_id}}"
+        description: "Uploaded video description"
+        hashtags:
+          - "mvp"
+        hls_url: "http://localhost:9000/hls/{{upload_id}}/master.m3u8"
+        thumbnail_url: "http://localhost:9000/hls/{{upload_id}}/thumbnail.jpg"
+        duration: 15
+        status: "moderation_pending"
+
+    - name: internal-update-video-status
+      method: PUT
+      url: "{{feed_url}}/internal/videos/{{video_id}}/status"
+      headers:
+        X-Internal-Api-Key: "{{internal_api_key}}"
+        Content-Type: application/json
+      body:
+        status: "approved"
+
+  moderation:
+    - name: moderation-health
+      method: GET
+      url: "{{moderation_url}}/health"
+
+    - name: moderation-ready
+      method: GET
+      url: "{{moderation_url}}/ready"
+
+    - name: moderation-queue-item
+      method: POST
+      url: "{{moderation_url}}/moderation/queue"
+      headers:
+        X-Internal-Api-Key: "{{internal_api_key}}"
+        Content-Type: application/json
+      body:
+        video_id: "{{video_id}}"
+        author_id: "{{user_id}}"
+        video_url: "http://localhost:9000/hls/{{video_id}}/master.m3u8"
+
+    - name: moderation-pending
+      method: GET
+      url: "{{moderation_url}}/moderation/pending"
+      headers:
+        X-Admin-Token: "{{admin_token}}"
+
+    - name: moderation-approve
+      method: POST
+      url: "{{moderation_url}}/moderation/{{moderation_id}}/approve"
+      headers:
+        X-Admin-Token: "{{admin_token}}"
+
+    - name: moderation-reject
+      method: POST
+      url: "{{moderation_url}}/moderation/{{moderation_id}}/reject"
+      headers:
+        X-Admin-Token: "{{admin_token}}"
+        Content-Type: application/json
+      body:
+        reason: "spam"
+
+notes:
+  - "Most client-facing requests use direct service ports 8001..8004."
+  - "Gateway-based requests can be formed by replacing auth_url/upload_url/feed_url/moderation_url with gateway_url."
+  - "Internal endpoints require the internal API key configured in .env."
+  - "The presigned upload URL is returned by POST /upload/request and should not be hardcoded."
