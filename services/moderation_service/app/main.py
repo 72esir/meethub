@@ -3,7 +3,6 @@ from fastapi import FastAPI
 from services.moderation_service.app.container import ModerationContainer
 from services.moderation_service.app.presentation.routes import router
 from services.moderation_service.app.settings import settings
-from shared.db import Base
 from shared.health import check_database, check_http, readiness_response
 from shared.startup import wait_for_database
 
@@ -17,7 +16,6 @@ def create_app() -> FastAPI:
     @app.on_event("startup")
     def startup() -> None:
         wait_for_database(container.engine, "moderation-service")
-        Base.metadata.create_all(bind=container.engine)
 
     @app.get("/health")
     def health() -> dict[str, str]:

@@ -3,7 +3,6 @@ from fastapi import FastAPI
 from services.auth_service.app.container import AuthContainer
 from services.auth_service.app.presentation.routes import router
 from services.auth_service.app.settings import settings
-from shared.db import Base
 from shared.health import check_database, readiness_response
 from shared.startup import wait_for_database
 
@@ -17,7 +16,6 @@ def create_app() -> FastAPI:
     @app.on_event("startup")
     def startup() -> None:
         wait_for_database(container.engine, "auth-service")
-        Base.metadata.create_all(bind=container.engine)
 
     @app.get("/health")
     def health() -> dict[str, str]:

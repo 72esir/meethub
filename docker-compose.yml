@@ -61,7 +61,7 @@ services:
       dockerfile: Dockerfile.service
     image: meethub-service:local
     working_dir: /app
-    command: uvicorn services.auth_service.app.main:app --host 0.0.0.0 --port 8000
+    command: sh -c "python scripts/run_migrations.py auth && uvicorn services.auth_service.app.main:app --host 0.0.0.0 --port 8000"
     env_file: .env
     environment:
       AUTH_DATABASE_URL: postgresql+psycopg://postgres:postgres@auth_db:5432/auth_db
@@ -78,7 +78,7 @@ services:
       dockerfile: Dockerfile.service
     image: meethub-service:local
     working_dir: /app
-    command: uvicorn services.upload_service.app.main:app --host 0.0.0.0 --port 8000
+    command: sh -c "python scripts/run_migrations.py upload && uvicorn services.upload_service.app.main:app --host 0.0.0.0 --port 8000"
     env_file: .env
     environment:
       UPLOAD_DATABASE_URL: postgresql+psycopg://postgres:postgres@upload_db:5432/upload_db
@@ -105,7 +105,7 @@ services:
       dockerfile: Dockerfile.service
     image: meethub-service:local
     working_dir: /app
-    command: uvicorn services.feed_service.app.main:app --host 0.0.0.0 --port 8000
+    command: sh -c "python scripts/run_migrations.py feed && uvicorn services.feed_service.app.main:app --host 0.0.0.0 --port 8000"
     env_file: .env
     environment:
       FEED_DATABASE_URL: postgresql+psycopg://postgres:postgres@feed_db:5432/feed_db
@@ -125,7 +125,7 @@ services:
       dockerfile: Dockerfile.service
     image: meethub-service:local
     working_dir: /app
-    command: uvicorn services.moderation_service.app.main:app --host 0.0.0.0 --port 8000
+    command: sh -c "python scripts/run_migrations.py moderation && uvicorn services.moderation_service.app.main:app --host 0.0.0.0 --port 8000"
     env_file: .env
     environment:
       MODERATION_DATABASE_URL: postgresql+psycopg://postgres:postgres@moderation_db:5432/moderation_db

@@ -1,10 +1,8 @@
 from fastapi import FastAPI
-from sqlalchemy import text
 
 from services.upload_service.app.container import UploadContainer
 from services.upload_service.app.presentation.routes import router
 from services.upload_service.app.settings import settings
-from shared.db import Base
 from shared.health import check_database, check_redis, check_s3, readiness_response
 from shared.storage import ensure_bucket
 from shared.startup import wait_for_database
@@ -19,13 +17,6 @@ def create_app() -> FastAPI:
     @app.on_event("startup")
     def startup() -> None:
         wait_for_database(container.engine, "upload-service")
-        Base.metadata.create_all(bind=container.engine)
-        with container.engine.begin() as connection:
-            connection.execute(text("ALTER TABLE upload_sessions ADD COLUMN IF NOT EXISTS error_message TEXT"))
-            connection.execute(text("ALTER TABLE upload_sessions ADD COLUMN IF NOT EXISTS location_name VARCHAR(255)"))
-            connection.execute(text("ALTER TABLE upload_sessions ADD COLUMN IF NOT EXISTS location_city VARCHAR(128)"))
-            connection.execute(text("ALTER TABLE upload_sessions ADD COLUMN IF NOT EXISTS location_latitude DOUBLE PRECISION"))
-            connection.execute(text("ALTER TABLE upload_sessions ADD COLUMN IF NOT EXISTS location_longitude DOUBLE PRECISION"))
         ensure_bucket(container.s3_client, settings.s3_bucket_raw)
 
     @app.get("/health")

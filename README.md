@@ -23,6 +23,12 @@ Backend monorepo for a TikTok-like MVP on `FastAPI`.
 2. Start the stack:
    - `docker compose up --build`
 
+Services now run Alembic migrations before startup.
+
+Migration docs:
+
+- [docs/MIGRATIONS.md](/c:/Users/asala/projects/python/meethub/docs/MIGRATIONS.md)
+
 ## Gateway
 
 - API entrypoint: `http://localhost:8080`
