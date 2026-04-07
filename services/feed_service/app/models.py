@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, Enum, Integer, String, Text, UniqueConstraint
+from sqlalchemy import DateTime, Enum, Float, Integer, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -22,6 +22,10 @@ class Video(Base):
     author_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True)
     description: Mapped[str] = mapped_column(Text, default="")
     hashtags: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)
+    location_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    location_city: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    location_latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
+    location_longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
     hls_url: Mapped[str] = mapped_column(String(500))
     thumbnail_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     duration: Mapped[int | None] = mapped_column(Integer, nullable=True)

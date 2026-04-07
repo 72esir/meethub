@@ -38,6 +38,7 @@ def complete_upload(
             user_id=user_id,
             description=payload.description,
             hashtags=payload.hashtags,
+            location=payload.location,
         )
     except UploadNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc

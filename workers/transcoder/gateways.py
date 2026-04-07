@@ -99,6 +99,7 @@ class MediaPublisherGateway:
                     "author_id": job.user_id,
                     "description": job.description,
                     "hashtags": job.hashtags,
+                    "location": job.location.to_dict() if job.location else None,
                     "hls_url": hls_url,
                     "thumbnail_url": None,
                     "duration": None,

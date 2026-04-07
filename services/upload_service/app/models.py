@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, Enum, String, Text
+from sqlalchemy import DateTime, Enum, Float, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -26,5 +26,9 @@ class UploadSession(Base):
     status: Mapped[UploadStatus] = mapped_column(Enum(UploadStatus), default=UploadStatus.pending)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     hashtags: Mapped[str | None] = mapped_column(Text, nullable=True)
+    location_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    location_city: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    location_latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
+    location_longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))

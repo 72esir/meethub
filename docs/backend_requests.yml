@@ -130,6 +130,11 @@ requests:
         hashtags:
           - "mvp"
           - "test"
+        location:
+          name: "Yeltsin Center"
+          city: "Yekaterinburg"
+          latitude: 56.8431
+          longitude: 60.5880
 
     - name: upload-status
       method: GET
@@ -234,6 +239,11 @@ requests:
         description: "Uploaded video description"
         hashtags:
           - "mvp"
+        location:
+          name: "Yeltsin Center"
+          city: "Yekaterinburg"
+          latitude: 56.8431
+          longitude: 60.5880
         hls_url: "http://localhost:9000/hls/{{upload_id}}/master.m3u8"
         thumbnail_url: "http://localhost:9000/hls/{{upload_id}}/thumbnail.jpg"
         duration: 15

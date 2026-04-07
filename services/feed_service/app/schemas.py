@@ -6,11 +6,19 @@ from pydantic import BaseModel, Field
 from services.feed_service.app.models import VideoStatus
 
 
+class LocationPayload(BaseModel):
+    name: str | None = Field(default=None, max_length=255)
+    city: str | None = Field(default=None, max_length=128)
+    latitude: float | None = Field(default=None, ge=-90, le=90)
+    longitude: float | None = Field(default=None, ge=-180, le=180)
+
+
 class VideoResponse(BaseModel):
     id: UUID
     author_id: UUID
     description: str
     hashtags: list[str]
+    location: LocationPayload | None = None
     hls_url: str
     thumbnail_url: str | None
     duration: int | None
@@ -30,6 +38,7 @@ class InternalCreateVideoRequest(BaseModel):
     author_id: UUID
     description: str = ""
     hashtags: list[str] = Field(default_factory=list)
+    location: LocationPayload | None = None
     hls_url: str
     thumbnail_url: str | None = None
     duration: int | None = None

@@ -77,6 +77,12 @@ $username = "smoke_$runId"
 $password = "password123"
 $viewerEmail = "viewer_$runId@example.com"
 $viewerUsername = "viewer_$runId"
+$videoLocation = @{
+    name = "Demo Event Hall $runId"
+    city = "Yekaterinburg"
+    latitude = 56.8389
+    longitude = 60.6057
+}
 
 Write-Step "Checking health endpoints"
 Invoke-WebRequest -UseBasicParsing "$GatewayUrl/healthz" | Out-Null
@@ -150,6 +156,7 @@ Invoke-Json -Method POST -Uri "$UploadUrl/upload/complete" -Headers $authHeaders
     upload_id   = $uploadId
     description = "Smoke test video $runId"
     hashtags    = @("smoke", "mvp", $runId)
+    location    = $videoLocation
 } | Out-Null
 
 Write-Step "Waiting for upload status to reach ready or error"
@@ -202,8 +209,15 @@ if ($null -eq $feedVideo) {
     throw "Approved video $videoId did not appear in feed"
 }
 
+if ($null -eq $feedVideo.location -or $feedVideo.location.city -ne $videoLocation.city) {
+    throw "Approved video location metadata was not preserved in feed"
+}
+
 Write-Step "Checking video endpoint and interactions"
-Invoke-Json -Method GET -Uri "$FeedUrl/videos/$videoId" -Headers $viewerAuthHeaders | Out-Null
+$videoResponse = Invoke-Json -Method GET -Uri "$FeedUrl/videos/$videoId" -Headers $viewerAuthHeaders
+if ($null -eq $videoResponse.location -or $videoResponse.location.name -ne $videoLocation.name) {
+    throw "Video endpoint did not return expected location metadata"
+}
 Invoke-Json -Method POST -Uri "$FeedUrl/videos/$videoId/like" -Headers $viewerAuthHeaders | Out-Null
 Invoke-Json -Method POST -Uri "$FeedUrl/videos/$videoId/view" -Headers $viewerAuthHeaders | Out-Null
 Invoke-Json -Method GET -Uri "$FeedUrl/users/$userId/videos" -Headers $viewerAuthHeaders | Out-Null

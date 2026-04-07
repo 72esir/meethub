@@ -22,6 +22,10 @@ def create_app() -> FastAPI:
         Base.metadata.create_all(bind=container.engine)
         with container.engine.begin() as connection:
             connection.execute(text("ALTER TABLE upload_sessions ADD COLUMN IF NOT EXISTS error_message TEXT"))
+            connection.execute(text("ALTER TABLE upload_sessions ADD COLUMN IF NOT EXISTS location_name VARCHAR(255)"))
+            connection.execute(text("ALTER TABLE upload_sessions ADD COLUMN IF NOT EXISTS location_city VARCHAR(128)"))
+            connection.execute(text("ALTER TABLE upload_sessions ADD COLUMN IF NOT EXISTS location_latitude DOUBLE PRECISION"))
+            connection.execute(text("ALTER TABLE upload_sessions ADD COLUMN IF NOT EXISTS location_longitude DOUBLE PRECISION"))
         ensure_bucket(container.s3_client, settings.s3_bucket_raw)
 
     @app.get("/health")

@@ -12,8 +12,9 @@ This project includes a PowerShell smoke test for the main MVP flow:
 8. Polling moderation queue
 9. Moderation approve
 10. Polling `feed/foryou`
-11. Video read / like / view checks from another user
-12. Follow / follow-status / followers / following / unfollow checks
+11. Validation of video location metadata in feed and video endpoints
+12. Video read / like / view checks from another user
+13. Follow / follow-status / followers / following / unfollow checks
 
 ## Script
 
@@ -87,6 +88,7 @@ upload_status  : ready
   - upload session creation
   - completion callback
   - upload status polling
+  - location metadata acceptance
 - `transcoder_worker`:
   - queue consumption
   - HLS generation
@@ -96,6 +98,7 @@ upload_status  : ready
   - approve flow
 - `feed_service`:
   - approved video visibility in `for you`
+  - location metadata preservation on video publish
   - video metadata read
   - like and view endpoints
   - author videos list

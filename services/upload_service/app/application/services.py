@@ -5,7 +5,7 @@ from redis import Redis
 from services.upload_service.app.application.exceptions import UploadNotFoundError
 from services.upload_service.app.models import UploadSession, UploadStatus
 from services.upload_service.app.repositories import UploadRepository
-from services.upload_service.app.schemas import InternalUpdateUploadStatusRequest, UploadSessionResponse, UploadStatusResponse
+from services.upload_service.app.schemas import InternalUpdateUploadStatusRequest, LocationPayload, UploadSessionResponse, UploadStatusResponse
 from shared.queue import TRANSCODE_QUEUE, enqueue
 
 
@@ -26,7 +26,7 @@ class UploadService:
         )
         return UploadSessionResponse(upload_id=upload.id, upload_url=presigned_url, s3_key=upload.s3_key)
 
-    def complete_upload(self, *, upload_id: UUID, user_id: str, description: str, hashtags: list[str]) -> dict[str, str]:
+    def complete_upload(self, *, upload_id: UUID, user_id: str, description: str, hashtags: list[str], location: LocationPayload | None) -> dict[str, str]:
         upload = self.repository.get_upload(upload_id)
         if not upload or str(upload.user_id) != user_id:
             raise UploadNotFoundError("upload not found")
@@ -34,6 +34,10 @@ class UploadService:
         upload.error_message = None
         upload.description = description
         upload.hashtags = ",".join(hashtags)
+        upload.location_name = location.name if location else None
+        upload.location_city = location.city if location else None
+        upload.location_latitude = location.latitude if location else None
+        upload.location_longitude = location.longitude if location else None
         self.repository.commit()
         enqueue(
             self.queue,
@@ -44,6 +48,7 @@ class UploadService:
                 "s3_input_key": upload.s3_key,
                 "description": description,
                 "hashtags": hashtags,
+                "location": location.model_dump() if location else None,
             },
         )
         return {"status": "queued"}
@@ -56,6 +61,22 @@ class UploadService:
             id=upload.id,
             status=upload.status,
             description=upload.description,
+            location=LocationPayload(
+                name=upload.location_name,
+                city=upload.location_city,
+                latitude=upload.location_latitude,
+                longitude=upload.location_longitude,
+            )
+            if any(
+                value is not None
+                for value in (
+                    upload.location_name,
+                    upload.location_city,
+                    upload.location_latitude,
+                    upload.location_longitude,
+                )
+            )
+            else None,
             error_message=upload.error_message,
             hashtags=upload.hashtags.split(",") if upload.hashtags else [],
             created_at=upload.created_at,

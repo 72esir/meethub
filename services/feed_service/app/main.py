@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from sqlalchemy import text
 
 from services.feed_service.app.container import FeedContainer
 from services.feed_service.app.presentation.routes import router
@@ -18,6 +19,11 @@ def create_app() -> FastAPI:
     def startup() -> None:
         wait_for_database(container.engine, "feed-service")
         Base.metadata.create_all(bind=container.engine)
+        with container.engine.begin() as connection:
+            connection.execute(text("ALTER TABLE videos ADD COLUMN IF NOT EXISTS location_name VARCHAR(255)"))
+            connection.execute(text("ALTER TABLE videos ADD COLUMN IF NOT EXISTS location_city VARCHAR(128)"))
+            connection.execute(text("ALTER TABLE videos ADD COLUMN IF NOT EXISTS location_latitude DOUBLE PRECISION"))
+            connection.execute(text("ALTER TABLE videos ADD COLUMN IF NOT EXISTS location_longitude DOUBLE PRECISION"))
 
     @app.get("/health")
     def health() -> dict[str, str]:

@@ -11,6 +11,13 @@ class UploadRequest(BaseModel):
     content_type: str = "video/mp4"
 
 
+class LocationPayload(BaseModel):
+    name: str | None = Field(default=None, max_length=255)
+    city: str | None = Field(default=None, max_length=128)
+    latitude: float | None = Field(default=None, ge=-90, le=90)
+    longitude: float | None = Field(default=None, ge=-180, le=180)
+
+
 class UploadSessionResponse(BaseModel):
     upload_id: UUID
     upload_url: str
@@ -22,12 +29,14 @@ class CompleteUploadRequest(BaseModel):
     upload_id: UUID
     description: str = Field(default="", max_length=5000)
     hashtags: list[str] = Field(default_factory=list)
+    location: LocationPayload | None = None
 
 
 class UploadStatusResponse(BaseModel):
     id: UUID
     status: UploadStatus
     description: str | None
+    location: LocationPayload | None
     error_message: str | None
     hashtags: list[str]
     created_at: datetime

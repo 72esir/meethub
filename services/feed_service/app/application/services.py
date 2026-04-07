@@ -10,6 +10,7 @@ from services.feed_service.app.schemas import (
     FeedResponse,
     FollowActionResponse,
     FollowListItemResponse,
+    LocationPayload,
     FollowStatusResponse,
     InternalCreateVideoRequest,
     UpdateStatusRequest,
@@ -53,11 +54,11 @@ class FeedService:
             self.cache.expire(cache_key, 300)
         return FeedResponse(items=[self._serialize(video) for video in videos], next_cursor=str(cursor + limit) if len(videos) == limit else None)
 
-    def get_video(self, *, video_id: UUID) -> Video:
+    def get_video(self, *, video_id: UUID) -> VideoResponse:
         video = self.repository.get_video(video_id)
         if not video:
             raise VideoNotFoundError("video not found")
-        return video
+        return self._serialize(video)
 
     def toggle_like(self, *, video_id: UUID, user_id: str) -> dict[str, bool]:
         return {"liked": self.repository.toggle_like(UUID(user_id), video_id)}
@@ -99,8 +100,8 @@ class FeedService:
     def following_list(self, *, target_user_id: UUID) -> list[FollowListItemResponse]:
         return [self._serialize_follow_item(item.followee_id, item.created_at) for item in self.repository.get_following(target_user_id)]
 
-    def user_videos(self, *, target_user_id: UUID) -> list[Video]:
-        return self.repository.get_user_videos(target_user_id)
+    def user_videos(self, *, target_user_id: UUID) -> list[VideoResponse]:
+        return [self._serialize(video) for video in self.repository.get_user_videos(target_user_id)]
 
     def internal_create_video(self, payload: InternalCreateVideoRequest) -> Video:
         return self.repository.upsert_video(
@@ -109,6 +110,10 @@ class FeedService:
                 author_id=payload.author_id,
                 description=payload.description,
                 hashtags=payload.hashtags,
+                location_name=payload.location.name if payload.location else None,
+                location_city=payload.location.city if payload.location else None,
+                location_latitude=payload.location.latitude if payload.location else None,
+                location_longitude=payload.location.longitude if payload.location else None,
                 hls_url=payload.hls_url,
                 thumbnail_url=payload.thumbnail_url,
                 duration=payload.duration,
@@ -133,7 +138,33 @@ class FeedService:
         return {"status": payload.status.value}
 
     def _serialize(self, video: Video) -> VideoResponse:
-        return VideoResponse.model_validate(video)
+        return VideoResponse(
+            id=video.id,
+            author_id=video.author_id,
+            description=video.description,
+            hashtags=video.hashtags,
+            location=LocationPayload(
+                name=video.location_name,
+                city=video.location_city,
+                latitude=video.location_latitude,
+                longitude=video.location_longitude,
+            )
+            if any(
+                value is not None
+                for value in (
+                    video.location_name,
+                    video.location_city,
+                    video.location_latitude,
+                    video.location_longitude,
+                )
+            )
+            else None,
+            hls_url=video.hls_url,
+            thumbnail_url=video.thumbnail_url,
+            duration=video.duration,
+            status=video.status,
+            created_at=video.created_at,
+        )
 
     def _serialize_follow_item(self, user_id: UUID, created_at) -> FollowListItemResponse:
         return FollowListItemResponse(user_id=user_id, created_at=created_at)
