@@ -17,6 +17,15 @@ depends_on = None
 
 
 upload_status_enum = sa.Enum("pending", "uploaded", "transcoding", "ready", "error", name="uploadstatus")
+upload_status_column_enum = postgresql.ENUM(
+    "pending",
+    "uploaded",
+    "transcoding",
+    "ready",
+    "error",
+    name="uploadstatus",
+    create_type=False,
+)
 
 
 def upgrade() -> None:
@@ -26,7 +35,7 @@ def upgrade() -> None:
         sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("user_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("s3_key", sa.String(length=500), nullable=False),
-        sa.Column("status", upload_status_enum, nullable=False),
+        sa.Column("status", upload_status_column_enum, nullable=False),
         sa.Column("description", sa.Text(), nullable=True),
         sa.Column("hashtags", sa.Text(), nullable=True),
         sa.Column("location_name", sa.String(length=255), nullable=True),

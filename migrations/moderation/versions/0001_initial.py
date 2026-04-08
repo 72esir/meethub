@@ -17,6 +17,13 @@ depends_on = None
 
 
 moderation_status_enum = sa.Enum("pending", "approved", "rejected", name="moderationstatus")
+moderation_status_column_enum = postgresql.ENUM(
+    "pending",
+    "approved",
+    "rejected",
+    name="moderationstatus",
+    create_type=False,
+)
 
 
 def upgrade() -> None:
@@ -27,7 +34,7 @@ def upgrade() -> None:
         sa.Column("video_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("author_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("video_url", sa.String(length=500), nullable=False),
-        sa.Column("status", moderation_status_enum, nullable=False),
+        sa.Column("status", moderation_status_column_enum, nullable=False),
         sa.Column("moderator_id", sa.Integer(), nullable=True),
         sa.Column("reason", sa.Text(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
