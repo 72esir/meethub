@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from services.feed_service.app.models import VideoStatus
+from services.feed_service.app.models import MediaType, VideoStatus
 
 
 class LocationPayload(BaseModel):
@@ -16,10 +16,12 @@ class LocationPayload(BaseModel):
 class VideoResponse(BaseModel):
     id: UUID
     author_id: UUID
+    media_type: MediaType
     description: str
     hashtags: list[str]
     location: LocationPayload | None = None
-    hls_url: str
+    media_url: str | None = None
+    hls_url: str | None = None
     thumbnail_url: str | None
     duration: int | None
     status: VideoStatus
@@ -36,10 +38,12 @@ class FeedResponse(BaseModel):
 class InternalCreateVideoRequest(BaseModel):
     id: UUID
     author_id: UUID
+    media_type: MediaType = MediaType.video
     description: str = ""
     hashtags: list[str] = Field(default_factory=list)
     location: LocationPayload | None = None
-    hls_url: str
+    media_url: str | None = None
+    hls_url: str | None = None
     thumbnail_url: str | None = None
     duration: int | None = None
 

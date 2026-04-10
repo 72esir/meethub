@@ -91,11 +91,15 @@ services:
       UPLOAD_S3_SECRET_KEY: ${S3_SECRET_KEY}
       UPLOAD_S3_REGION: ${S3_REGION}
       UPLOAD_S3_BUCKET_RAW: ${S3_BUCKET_RAW}
+      UPLOAD_S3_BUCKET_IMAGES: ${S3_BUCKET_IMAGES:-images}
+      UPLOAD_CDN_BASE_URL: http://localhost:9000
+      UPLOAD_FEED_SERVICE_URL: http://feed_service:8000
       PYTHONPATH: /app
     depends_on:
       - upload_db
       - redis_queue
       - minio
+      - feed_service
     ports:
       - "8002:8000"
 

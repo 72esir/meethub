@@ -7,6 +7,7 @@ param(
     [string]$AdminToken = "123",
     [Parameter(Mandatory = $true)]
     [string]$VideoPath,
+    [string]$ImagePath = "",
     [int]$UploadPollAttempts = 20,
     [int]$UploadPollDelaySeconds = 3,
     [int]$ModerationPollAttempts = 20,
@@ -70,7 +71,12 @@ if (-not (Test-Path -LiteralPath $VideoPath)) {
     throw "Video file not found: $VideoPath"
 }
 
+if ($ImagePath -and -not (Test-Path -LiteralPath $ImagePath)) {
+    throw "Image file not found: $ImagePath"
+}
+
 $fileName = [System.IO.Path]::GetFileName($VideoPath)
+$imageFileName = if ($ImagePath) { [System.IO.Path]::GetFileName($ImagePath) } else { "" }
 $runId = [guid]::NewGuid().ToString("N").Substring(0, 8)
 $email = "smoke_$runId@example.com"
 $username = "smoke_$runId"
@@ -247,6 +253,49 @@ if ($followStatusAfterDelete.is_following) {
     throw "Follow status did not switch back to is_following=false"
 }
 
+if ($ImagePath) {
+    Write-Step "Requesting image upload session"
+    $imageUploadRequest = Invoke-Json -Method POST -Uri "$UploadUrl/upload/image/request" -Headers $authHeaders -Body @{
+        file_name = $imageFileName
+        content_type = "image/jpeg"
+    }
+
+    $imageUploadId = $imageUploadRequest.upload_id
+    $presignedImageUploadUrl = $imageUploadRequest.upload_url
+    $imageUrl = $imageUploadRequest.image_url
+
+    Write-Step "Uploading image binary to presigned URL"
+    Invoke-WebRequest -UseBasicParsing -Method Put -Uri $presignedImageUploadUrl -InFile $ImagePath -ContentType "image/jpeg" | Out-Null
+
+    Write-Step "Completing image upload"
+    Invoke-Json -Method POST -Uri "$UploadUrl/upload/image/complete" -Headers $authHeaders -Body @{
+        upload_id = $imageUploadId
+        description = "Smoke test image $runId"
+        hashtags = @("smoke", "image", $runId)
+        location = $videoLocation
+    } | Out-Null
+
+    $imageStatus = Invoke-Json -Method GET -Uri "$UploadUrl/upload/status/$imageUploadId" -Headers $authHeaders
+    if ($imageStatus.status -ne "ready" -or $imageStatus.image_url -ne $imageUrl) {
+        throw "Image upload did not reach ready state"
+    }
+
+    $imageFeedResult = Wait-Until `
+        -Action { Invoke-Json -Method GET -Uri "$FeedUrl/feed/foryou" -Headers $authHeaders } `
+        -Condition {
+            param($result)
+            @($result.items) | Where-Object { $_.id -eq $imageUploadId -and $_.media_type -eq "image" } | Select-Object -First 1
+        } `
+        -Attempts $FeedPollAttempts `
+        -DelaySeconds $FeedPollDelaySeconds `
+        -Description "image appearance in feed"
+
+    $imageFeedItem = @($imageFeedResult.items) | Where-Object { $_.id -eq $imageUploadId -and $_.media_type -eq "image" } | Select-Object -First 1
+    if ($null -eq $imageFeedItem -or $imageFeedItem.media_url -ne $imageUrl) {
+        throw "Image item did not appear in feed with expected media_url"
+    }
+}
+
 Write-Step "Smoke test completed"
 [pscustomobject]@{
     author_user_id = $userId
@@ -257,4 +306,5 @@ Write-Step "Smoke test completed"
     feed_status    = "ok"
     follow_status  = "ok"
     upload_status  = $uploadStatus.status
+    image_status   = if ($ImagePath) { "ok" } else { "skipped" }
 }

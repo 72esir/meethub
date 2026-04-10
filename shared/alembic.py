@@ -17,7 +17,7 @@ def build_alembic_config(service_name: str) -> Config:
     return config
 
 
-def upgrade_head(service_name: str, *, database_url: str, expected_tables: set[str]) -> None:
+def upgrade_head(service_name: str, *, database_url: str, expected_tables: set[str], baseline_revision: str) -> None:
     config = build_alembic_config(service_name)
     config.set_main_option("sqlalchemy.url", database_url)
 
@@ -27,7 +27,6 @@ def upgrade_head(service_name: str, *, database_url: str, expected_tables: set[s
     engine.dispose()
 
     if "alembic_version" not in table_names and expected_tables.issubset(table_names):
-        command.stamp(config, "head")
-        return
+        command.stamp(config, baseline_revision)
 
     command.upgrade(config, "head")

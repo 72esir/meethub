@@ -51,5 +51,9 @@ class UploadContainer:
             repository=UploadRepository(db),
             queue=self.queue,
             raw_bucket=self.settings.s3_bucket_raw,
+            image_bucket=self.settings.s3_bucket_images,
+            cdn_base_url=self.settings.cdn_base_url,
+            feed_service_url=self.settings.feed_service_url,
+            internal_api_key=self.settings.internal_api_key,
             presign_client=self.presign_s3_client,
         )

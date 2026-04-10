@@ -18,6 +18,7 @@ def create_app() -> FastAPI:
     def startup() -> None:
         wait_for_database(container.engine, "upload-service")
         ensure_bucket(container.s3_client, settings.s3_bucket_raw)
+        ensure_bucket(container.s3_client, settings.s3_bucket_images)
 
     @app.get("/health")
     def health() -> dict[str, str]:

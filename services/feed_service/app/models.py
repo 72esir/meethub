@@ -15,18 +15,25 @@ class VideoStatus(str, enum.Enum):
     rejected = "rejected"
 
 
+class MediaType(str, enum.Enum):
+    video = "video"
+    image = "image"
+
+
 class Video(Base):
     __tablename__ = "videos"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
     author_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True)
+    media_type: Mapped[MediaType] = mapped_column(Enum(MediaType), default=MediaType.video, index=True)
     description: Mapped[str] = mapped_column(Text, default="")
     hashtags: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)
     location_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     location_city: Mapped[str | None] = mapped_column(String(128), nullable=True)
     location_latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
     location_longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
-    hls_url: Mapped[str] = mapped_column(String(500))
+    media_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    hls_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     thumbnail_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     duration: Mapped[int | None] = mapped_column(Integer, nullable=True)
     status: Mapped[VideoStatus] = mapped_column(Enum(VideoStatus), default=VideoStatus.moderation_pending, index=True)

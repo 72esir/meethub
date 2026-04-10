@@ -15,6 +15,7 @@ This project includes a PowerShell smoke test for the main MVP flow:
 11. Validation of video location metadata in feed and video endpoints
 12. Video read / like / view checks from another user
 13. Follow / follow-status / followers / following / unfollow checks
+14. Optional image upload and feed visibility checks when `-ImagePath` is provided
 
 ## Script
 
@@ -43,6 +44,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\smoke_test.ps1 -VideoPath "C:
 - `-FeedUrl` default: `http://localhost:8003`
 - `-ModerationUrl` default: `http://localhost:8004`
 - `-AdminToken` default: `123`
+- `-ImagePath` optional local image file for image upload checks
 - `-UploadPollAttempts` default: `20`
 - `-UploadPollDelaySeconds` default: `3`
 - `-ModerationPollAttempts` default: `20`
@@ -63,6 +65,7 @@ moderation_id  : ...
 feed_status    : ok
 follow_status  : ok
 upload_status  : ready
+image_status   : skipped
 ```
 
 ## Failure points
@@ -86,6 +89,7 @@ upload_status  : ready
   - authenticated profile fetch
 - `upload_service`:
   - upload session creation
+  - image upload session creation when `-ImagePath` is provided
   - completion callback
   - upload status polling
   - location metadata acceptance
@@ -98,6 +102,7 @@ upload_status  : ready
   - approve flow
 - `feed_service`:
   - approved video visibility in `for you`
+  - image visibility in `for you` when `-ImagePath` is provided
   - location metadata preservation on video publish
   - video metadata read
   - like and view endpoints

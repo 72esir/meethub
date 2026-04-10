@@ -21,6 +21,7 @@ def get_service_config(service_name: str) -> dict[str, Any]:
         return {
             "database_url": settings.database_url,
             "expected_tables": {"users", "sessions"},
+            "baseline_revision": "0001_auth_initial",
         }
     if service_name == "upload":
         from services.upload_service.app.settings import settings
@@ -28,6 +29,7 @@ def get_service_config(service_name: str) -> dict[str, Any]:
         return {
             "database_url": settings.database_url,
             "expected_tables": {"upload_sessions"},
+            "baseline_revision": "0001_upload_initial",
         }
     if service_name == "feed":
         from services.feed_service.app.settings import settings
@@ -35,6 +37,7 @@ def get_service_config(service_name: str) -> dict[str, Any]:
         return {
             "database_url": settings.database_url,
             "expected_tables": {"videos", "likes", "follows", "views"},
+            "baseline_revision": "0001_feed_initial",
         }
     if service_name == "moderation":
         from services.moderation_service.app.settings import settings
@@ -42,6 +45,7 @@ def get_service_config(service_name: str) -> dict[str, Any]:
         return {
             "database_url": settings.database_url,
             "expected_tables": {"moderation_queue"},
+            "baseline_revision": "0001_moderation_initial",
         }
     raise ValueError(f"Unknown service: {service_name}")
 
@@ -57,6 +61,7 @@ def main() -> int:
         service_name,
         database_url=config["database_url"],
         expected_tables=config["expected_tables"],
+        baseline_revision=config["baseline_revision"],
     )
     print(f"Applied migrations for {service_name}")
     return 0

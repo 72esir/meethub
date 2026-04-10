@@ -7,7 +7,10 @@ from services.upload_service.app.application.exceptions import UploadNotFoundErr
 from services.upload_service.app.application.services import UploadService
 from services.upload_service.app.presentation.dependencies import get_current_user, get_internal_auth, get_upload_service
 from services.upload_service.app.schemas import (
+    CompleteImageUploadRequest,
     CompleteUploadRequest,
+    ImageUploadRequest,
+    ImageUploadSessionResponse,
     InternalUpdateUploadStatusRequest,
     UploadRequest,
     UploadSessionResponse,
@@ -26,6 +29,15 @@ def request_upload(
     return service.request_upload(user_id=user_id, file_name=payload.file_name, content_type=payload.content_type)
 
 
+@router.post("/upload/image/request", response_model=ImageUploadSessionResponse)
+def request_image_upload(
+    payload: ImageUploadRequest,
+    user_id: Annotated[str, Depends(get_current_user)],
+    service: Annotated[UploadService, Depends(get_upload_service)],
+) -> ImageUploadSessionResponse:
+    return service.request_image_upload(user_id=user_id, file_name=payload.file_name, content_type=payload.content_type)
+
+
 @router.post("/upload/complete", status_code=status.HTTP_202_ACCEPTED)
 def complete_upload(
     payload: CompleteUploadRequest,
@@ -34,6 +46,24 @@ def complete_upload(
 ) -> dict[str, str]:
     try:
         return service.complete_upload(
+            upload_id=payload.upload_id,
+            user_id=user_id,
+            description=payload.description,
+            hashtags=payload.hashtags,
+            location=payload.location,
+        )
+    except UploadNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+
+@router.post("/upload/image/complete")
+async def complete_image_upload(
+    payload: CompleteImageUploadRequest,
+    user_id: Annotated[str, Depends(get_current_user)],
+    service: Annotated[UploadService, Depends(get_upload_service)],
+) -> dict[str, str]:
+    try:
+        return await service.complete_image_upload(
             upload_id=payload.upload_id,
             user_id=user_id,
             description=payload.description,

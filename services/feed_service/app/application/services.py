@@ -4,7 +4,7 @@ from uuid import UUID
 from redis import Redis
 
 from services.feed_service.app.application.exceptions import InvalidFollowError, VideoNotFoundError
-from services.feed_service.app.models import Follow, Video, VideoStatus
+from services.feed_service.app.models import Follow, MediaType, Video, VideoStatus
 from services.feed_service.app.repositories import FeedRepository
 from services.feed_service.app.schemas import (
     FeedResponse,
@@ -108,16 +108,18 @@ class FeedService:
             Video(
                 id=payload.id,
                 author_id=payload.author_id,
+                media_type=payload.media_type,
                 description=payload.description,
                 hashtags=payload.hashtags,
                 location_name=payload.location.name if payload.location else None,
                 location_city=payload.location.city if payload.location else None,
                 location_latitude=payload.location.latitude if payload.location else None,
                 location_longitude=payload.location.longitude if payload.location else None,
+                media_url=payload.media_url,
                 hls_url=payload.hls_url,
                 thumbnail_url=payload.thumbnail_url,
                 duration=payload.duration,
-                status=VideoStatus.moderation_pending,
+                status=VideoStatus.approved if payload.media_type == MediaType.image else VideoStatus.moderation_pending,
             )
         )
 
@@ -141,6 +143,7 @@ class FeedService:
         return VideoResponse(
             id=video.id,
             author_id=video.author_id,
+            media_type=video.media_type,
             description=video.description,
             hashtags=video.hashtags,
             location=LocationPayload(
@@ -159,6 +162,7 @@ class FeedService:
                 )
             )
             else None,
+            media_url=video.media_url,
             hls_url=video.hls_url,
             thumbnail_url=video.thumbnail_url,
             duration=video.duration,

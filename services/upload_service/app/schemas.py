@@ -11,6 +11,11 @@ class UploadRequest(BaseModel):
     content_type: str = "video/mp4"
 
 
+class ImageUploadRequest(BaseModel):
+    file_name: str
+    content_type: str = Field(default="image/jpeg", pattern=r"^image/(jpeg|png|webp)$")
+
+
 class LocationPayload(BaseModel):
     name: str | None = Field(default=None, max_length=255)
     city: str | None = Field(default=None, max_length=128)
@@ -25,7 +30,22 @@ class UploadSessionResponse(BaseModel):
     expires_in_seconds: int = 1800
 
 
+class ImageUploadSessionResponse(BaseModel):
+    upload_id: UUID
+    upload_url: str
+    image_url: str
+    s3_key: str
+    expires_in_seconds: int = 1800
+
+
 class CompleteUploadRequest(BaseModel):
+    upload_id: UUID
+    description: str = Field(default="", max_length=5000)
+    hashtags: list[str] = Field(default_factory=list)
+    location: LocationPayload | None = None
+
+
+class CompleteImageUploadRequest(BaseModel):
     upload_id: UUID
     description: str = Field(default="", max_length=5000)
     hashtags: list[str] = Field(default_factory=list)
@@ -39,6 +59,7 @@ class UploadStatusResponse(BaseModel):
     location: LocationPayload | None
     error_message: str | None
     hashtags: list[str]
+    image_url: str | None = None
     created_at: datetime
 
 

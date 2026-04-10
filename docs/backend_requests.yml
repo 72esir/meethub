@@ -109,6 +109,16 @@ requests:
         file_name: "test.mp4"
         content_type: "video/mp4"
 
+    - name: request-image-upload
+      method: POST
+      url: "{{upload_url}}/upload/image/request"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+        Content-Type: application/json
+      body:
+        file_name: "photo.jpg"
+        content_type: "image/jpeg"
+
     - name: upload-binary-to-presigned-url
       method: PUT
       url: "{{upload_url_presigned}}"
@@ -130,6 +140,24 @@ requests:
         hashtags:
           - "mvp"
           - "test"
+        location:
+          name: "Yeltsin Center"
+          city: "Yekaterinburg"
+          latitude: 56.8431
+          longitude: 60.5880
+
+    - name: complete-image-upload
+      method: POST
+      url: "{{upload_url}}/upload/image/complete"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+        Content-Type: application/json
+      body:
+        upload_id: "{{upload_id}}"
+        description: "Photo from event"
+        hashtags:
+          - "photo"
+          - "event"
         location:
           name: "Yeltsin Center"
           city: "Yekaterinburg"
@@ -236,6 +264,7 @@ requests:
       body:
         id: "{{upload_id}}"
         author_id: "{{user_id}}"
+        media_type: "video"
         description: "Uploaded video description"
         hashtags:
           - "mvp"
@@ -245,6 +274,7 @@ requests:
           latitude: 56.8431
           longitude: 60.5880
         hls_url: "http://localhost:9000/hls/{{upload_id}}/master.m3u8"
+        media_url: "http://localhost:9000/hls/{{upload_id}}/master.m3u8"
         thumbnail_url: "http://localhost:9000/hls/{{upload_id}}/thumbnail.jpg"
         duration: 15
         status: "moderation_pending"

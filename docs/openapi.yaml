@@ -224,6 +224,29 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /upload/image/request:
+    post:
+      tags: [upload]
+      summary: Create image upload session and generate presigned URL
+      operationId: requestImageUpload
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImageUploadRequest'
+      responses:
+        '200':
+          description: Image upload session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageUploadSessionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /upload/complete:
     post:
       tags: [upload]
@@ -240,6 +263,31 @@ paths:
       responses:
         '202':
           description: Upload accepted for processing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusMessage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /upload/image/complete:
+    post:
+      tags: [upload]
+      summary: Complete image upload and publish image item
+      operationId: completeImageUpload
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompleteImageUploadRequest'
+      responses:
+        '200':
+          description: Image uploaded and published
           content:
             application/json:
               schema:
@@ -920,6 +968,22 @@ components:
         - file_name
         - content_type
 
+    ImageUploadRequest:
+      type: object
+      properties:
+        file_name:
+          type: string
+        content_type:
+          type: string
+          enum:
+            - image/jpeg
+            - image/png
+            - image/webp
+          default: image/jpeg
+      required:
+        - file_name
+        - content_type
+
     UploadSessionResponse:
       type: object
       properties:
@@ -939,7 +1003,48 @@ components:
         - s3_key
         - expires_in_seconds
 
+    ImageUploadSessionResponse:
+      type: object
+      properties:
+        upload_id:
+          type: string
+          format: uuid
+        upload_url:
+          type: string
+        image_url:
+          type: string
+        s3_key:
+          type: string
+        expires_in_seconds:
+          type: integer
+          default: 1800
+      required:
+        - upload_id
+        - upload_url
+        - image_url
+        - s3_key
+        - expires_in_seconds
+
     CompleteUploadRequest:
+      type: object
+      properties:
+        upload_id:
+          type: string
+          format: uuid
+        description:
+          type: string
+          maxLength: 5000
+          default: ""
+        hashtags:
+          type: array
+          items:
+            type: string
+        location:
+          $ref: '#/components/schemas/LocationPayload'
+      required:
+        - upload_id
+
+    CompleteImageUploadRequest:
       type: object
       properties:
         upload_id:
@@ -978,6 +1083,9 @@ components:
           type: array
           items:
             type: string
+        image_url:
+          type: string
+          nullable: true
         created_at:
           type: string
           format: date-time
@@ -1005,6 +1113,12 @@ components:
         - approved
         - rejected
 
+    MediaType:
+      type: string
+      enum:
+        - video
+        - image
+
     VideoResponse:
       type: object
       properties:
@@ -1014,6 +1128,8 @@ components:
         author_id:
           type: string
           format: uuid
+        media_type:
+          $ref: '#/components/schemas/MediaType'
         description:
           type: string
         hashtags:
@@ -1022,8 +1138,12 @@ components:
             type: string
         location:
           $ref: '#/components/schemas/LocationPayload'
+        media_url:
+          type: string
+          nullable: true
         hls_url:
           type: string
+          nullable: true
         thumbnail_url:
           type: string
           nullable: true
@@ -1066,6 +1186,8 @@ components:
         author_id:
           type: string
           format: uuid
+        media_type:
+          $ref: '#/components/schemas/MediaType'
         description:
           type: string
           default: ""
@@ -1075,8 +1197,12 @@ components:
             type: string
         location:
           $ref: '#/components/schemas/LocationPayload'
+        media_url:
+          type: string
+          nullable: true
         hls_url:
           type: string
+          nullable: true
         thumbnail_url:
           type: string
           nullable: true
