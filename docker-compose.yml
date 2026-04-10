@@ -167,6 +167,24 @@ services:
       - feed_service
       - moderation_service
 
+  afisha_parser_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    image: meethub-worker:local
+    working_dir: /app
+    command: python workers/afisha_parser/main.py
+    env_file: .env
+    environment:
+      AFISHA_CITY: ${AFISHA_CITY:-moscow}
+      AFISHA_BOT_USER_ID: ${AFISHA_BOT_USER_ID:-00000000-0000-0000-0000-000000000001}
+      AFISHA_EVENTS_LIMIT: ${AFISHA_EVENTS_LIMIT:-50}
+      AFISHA_FEED_SERVICE_URL: http://feed_service:8000
+      AFISHA_INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+      PYTHONPATH: /app
+    depends_on:
+      - feed_service
+
   gateway:
     image: traefik:v3.3
     command:
