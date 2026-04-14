@@ -27,6 +27,7 @@ This project includes a PowerShell smoke test for the main MVP flow:
   - `docker compose up -d`
 - All service readiness endpoints return `200`
 - You have a local MP4 file for upload
+- Direct service ports used by the smoke test are intentionally bound to `127.0.0.1` only
 
 ## Run
 

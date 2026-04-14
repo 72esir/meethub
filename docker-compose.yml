@@ -6,7 +6,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
 
   upload_db:
     image: postgres:16
@@ -15,7 +15,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "5434:5432"
+      - "127.0.0.1:5434:5432"
 
   feed_db:
     image: postgres:16
@@ -24,7 +24,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "5435:5432"
+      - "127.0.0.1:5435:5432"
 
   moderation_db:
     image: postgres:16
@@ -33,17 +33,17 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "5436:5432"
+      - "127.0.0.1:5436:5432"
 
   redis_cache:
     image: redis:7
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
 
   redis_queue:
     image: redis:7
     ports:
-      - "6380:6379"
+      - "127.0.0.1:6380:6379"
 
   minio:
     image: minio/minio:RELEASE.2025-02-28T09-55-16Z
@@ -52,8 +52,8 @@ services:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
 
   auth_service:
     build:
@@ -70,7 +70,7 @@ services:
     depends_on:
       - auth_db
     ports:
-      - "8001:8000"
+      - "127.0.0.1:8001:8000"
 
   upload_service:
     build:
@@ -101,7 +101,7 @@ services:
       - minio
       - feed_service
     ports:
-      - "8002:8000"
+      - "127.0.0.1:8002:8000"
 
   feed_service:
     build:
@@ -121,7 +121,7 @@ services:
       - feed_db
       - redis_cache
     ports:
-      - "8003:8000"
+      - "127.0.0.1:8003:8000"
 
   moderation_service:
     build:
@@ -141,7 +141,7 @@ services:
       - moderation_db
       - feed_service
     ports:
-      - "8004:8000"
+      - "127.0.0.1:8004:8000"
 
   transcoder_worker:
     build:
@@ -189,4 +189,4 @@ services:
       - moderation_service
     ports:
       - "8080:80"
-      - "8081:8080"
+      - "127.0.0.1:8081:8080"

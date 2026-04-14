@@ -33,7 +33,13 @@ Migration docs:
 
 - API entrypoint: `http://localhost:8080`
 - Health: `GET http://localhost:8080/healthz`
-- Traefik dashboard: `http://localhost:8081/dashboard/`
+- Traefik dashboard: `http://127.0.0.1:8081/dashboard/`
+
+## Port exposure
+
+- Public entrypoint is only Traefik on `:8080`
+- Direct service ports (`8001`-`8004`), PostgreSQL (`5433`-`5436`), Redis (`6379`, `6380`), MinIO (`9000`, `9001`) and Traefik dashboard (`8081`) are bound to `127.0.0.1` only
+- Services communicate with each other over the internal Docker network; they do not need published ports for inter-service traffic
 
 ## Routed prefixes
 
